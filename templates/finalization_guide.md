@@ -51,6 +51,16 @@ ls *.pptx            # 템플릿 파일
 
 ## 🚀 Step 4-3: PPT 생성
 
+### 빌드 전 검증 (필수)
+```bash
+python .claude/skills/4c-edu-ppt/scripts/validate_markdown_v3.py \
+  --md "Python기초과정_2026-01-06_v1.0.md" \
+  --report "Python기초과정_진행표.md"
+```
+- `[FAIL]` 이면 error를 고친다 (형식 문제, 빌드가 깨짐)
+- warning은 설계 권고. `review_checklist.md` 2단계로 판정
+- `--report` 로 저장된 진행표는 강사 노트와 함께 배포
+
 ### 기본 생성
 ```bash
 python .claude/skills/4c-edu-ppt/scripts/generate_with_master_layout.py \

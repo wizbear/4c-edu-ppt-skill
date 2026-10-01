@@ -1,19 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Markdown 파일로부터 4C 구조 기반 PowerPoint 생성
-슬라이드 마스터의 커스텀 레이아웃 사용 버전
+Markdown 파일로부터 4C 구조 기반 PowerPoint 생성 (메인 빌드 스크립트)
 
-커스텀 레이아웃 이름 규칙:
-- "4C - Connect"
-- "4C - Concept"
-- "4C - Concrete Practice"
-- "4C - Conclusion"
+레이아웃 이름 규칙 (템플릿):
+- "Title_Page"            : 과정 제목 (프론트매터 course가 있을 때)
+- "Module_Divider"        : 모듈 시작
+- "4C - Connect" / "Connect"
+- "4C - Concept" / "Concept"
+- "4C - Review" / "Review"           (없으면 Concept 레이아웃으로 대체)
+- "4C - Concrete Practice" / "Concrete Practice"
+- "4C - Conclusion" / "Conclusion"
+- "Break", "End", "Blank"
+
+v1.1 추가
+- 프론트매터(course/audience/total_time/outcome/mode) → Title_Page 슬라이드
+- 모듈 outcome → Module Start 본문과 노트
+- activity: 를 4C 전 단계에서 렌더 (본문 하단 "▶ 활동" 블록)
+- pattern: + params: → references/activities.json 템플릿으로 활동 텍스트 생성
+- ## Review 슬라이드
+- notes: → 강사 노트, handout: → <output>_handout.md
+- action_plan: → Conclusion "✍ 실행 계획" 블록
 """
 
 import argparse
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from md4c import (parse_course, load_catalog, render_activity, safe_print,  # noqa: E402
+                  FOUR_C, LEARNER_SLIDES)
 
 try:
     from pptx import Presentation
@@ -26,555 +42,436 @@ except ImportError:
     sys.exit(1)
 
 
-def safe_print(text):
-    """Windows 콘솔에서 안전하게 출력"""
-    try:
-        print(text)
-    except UnicodeEncodeError:
-        # 유니코드 문자를 ASCII로 변환
-        ascii_text = text.encode('ascii', 'replace').decode('ascii')
-        print(ascii_text)
+# v1.0 호환 심볼
+from md4c import SlideContent, parse_markdown  # noqa: E402,F401
 
 
-class SlideContent:
-    """슬라이드 내용을 담는 클래스"""
-    def __init__(self, slide_type, **kwargs):
-        self.slide_type = slide_type
-        self.data = kwargs
-
-    def __repr__(self):
-        return f"SlideContent({self.slide_type}, {self.data})"
-
-
-def parse_markdown(md_file):
-    """Markdown 파일을 파싱하여 슬라이드 구조 추출"""
-    with open(md_file, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    modules = []
-    current_module = None
-    current_slide = None
-    current_field = None
-    multiline_value = []
-
-    lines = content.split('\n')
-    i = 0
-
-    while i < len(lines):
-        line = lines[i]
-
-        # 모듈 시작
-        if line.startswith('# ') and not line.startswith('## '):
-            if current_module is not None:
-                if current_slide:
-                    if current_field and multiline_value:
-                        current_slide.data[current_field] = '\n'.join(multiline_value).strip()
-                    current_module['slides'].append(current_slide)
-                modules.append(current_module)
-
-            module_title = line[2:].strip()
-            current_module = {'title': module_title, 'slides': []}
-            current_slide = None
-            current_field = None
-            multiline_value = []
-
-        # 슬라이드 타입
-        elif line.startswith('## '):
-            if current_slide:
-                if current_field and multiline_value:
-                    current_slide.data[current_field] = '\n'.join(multiline_value).strip()
-                if current_module:
-                    current_module['slides'].append(current_slide)
-
-            slide_type = line[3:].strip()
-            current_slide = SlideContent(slide_type)
-            current_field = None
-            multiline_value = []
-
-        # 필드 값 (리스트 항목 제외)
-        elif current_slide and ':' in line and not line.startswith(' ') and not line.startswith('\t') and not line.startswith('-'):
-            if current_field and multiline_value:
-                current_slide.data[current_field] = '\n'.join(multiline_value).strip()
-                multiline_value = []
-
-            parts = line.split(':', 1)
-            if len(parts) == 2:
-                field_name = parts[0].strip()
-                field_value = parts[1].strip()
-
-                if field_value == '|' or field_value == '':
-                    # multiline 모드 시작 (| 또는 빈 값)
-                    current_field = field_name
-                    multiline_value = []
-                else:
-                    current_slide.data[field_name] = field_value
-                    current_field = None
-
-        # multiline 값
-        elif current_field and (line.startswith('  ') or line.startswith('\t') or line.startswith('-') or line.strip() == ''):
-            multiline_value.append(line.lstrip())
-
-        # 빈 줄
-        elif line.strip() in ['', '---']:
-            if current_field and multiline_value:
-                current_slide.data[current_field] = '\n'.join(multiline_value).strip()
-                current_field = None
-                multiline_value = []
-
-        # Module Start 본문
-        elif current_slide and current_slide.slide_type == 'Module Start' and line.strip():
-            if 'content' not in current_slide.data:
-                current_slide.data['content'] = []
-            current_slide.data['content'].append(line.strip())
-
-        i += 1
-
-    # 마지막 처리
-    if current_slide:
-        if current_field and multiline_value:
-            current_slide.data[current_field] = '\n'.join(multiline_value).strip()
-        if current_module:
-            current_module['slides'].append(current_slide)
-    if current_module:
-        modules.append(current_module)
-
-    # Module Start content 문자열 변환
-    for module in modules:
-        for slide in module['slides']:
-            if slide.slide_type == 'Module Start' and 'content' in slide.data:
-                slide.data['content'] = '\n'.join(slide.data['content'])
-
-    return modules
-
+# ------------------------------------------------------------- helpers
 
 def find_layout_by_name(prs, name_pattern):
-    """
-    레이아웃 이름으로 레이아웃 찾기
-
-    Args:
-        prs: Presentation 객체
-        name_pattern: 레이아웃 이름 패턴
-
-    Returns:
-        레이아웃 객체 또는 None
-    """
+    """레이아웃 이름에 name_pattern(대소문자 무시)이 포함된 첫 레이아웃"""
     for layout in prs.slide_layouts:
         if name_pattern.lower() in layout.name.lower():
             return layout
     return None
 
 
-def add_4c_slide_with_layout(prs, slide_type, time_str='', title='', main='', sub=''):
-    """
-    마스터 레이아웃을 사용하여 4C 슬라이드 추가
+def find_first_layout(prs, *names):
+    for n in names:
+        l = find_layout_by_name(prs, n)
+        if l is not None:
+            return l
+    return None
 
-    레이아웃 이름 규칙:
-    - "4C - Connect"
-    - "4C - Concept"
-    - "4C - Concrete Practice"
-    - "4C - Conclusion"
-    """
 
-    # 레이아웃 찾기 (예: "Connect" → "4C - Connect")
-    layout_name = f"4C - {slide_type}"
-    layout = find_layout_by_name(prs, layout_name)
+def blank_layout(prs):
+    l = find_layout_by_name(prs, 'Blank')
+    if l is not None:
+        return l
+    return prs.slide_layouts[6] if len(prs.slide_layouts) > 6 else prs.slide_layouts[0]
 
-    if layout is None:
-        # 대체: 단순히 slide_type으로 검색
-        layout = find_layout_by_name(prs, slide_type)
 
-    if layout is None:
-        print(f"[WARNING] Layout '{layout_name}' not found in template.")
-        print(f"[INFO] Available layouts:")
-        for idx, l in enumerate(prs.slide_layouts):
-            print(f"  [{idx}] {l.name}")
-        print(f"[INFO] Using blank layout instead.")
-        # Blank layout 사용
-        layout = prs.slide_layouts[6] if len(prs.slide_layouts) > 6 else prs.slide_layouts[0]
-
-    print(f"[INFO] Creating '{slide_type}' slide using layout: {layout.name}")
-    slide = prs.slides.add_slide(layout)
-
-    # 자리표시자 채우기
-    # placeholder type: 1=Title, 2=Body, 7=Content/Object, etc.
-
-    title_filled = False
-    content_count = 0
-
+def body_placeholders(slide):
+    """BODY(2)/OBJECT(7) placeholder를 idx 순으로"""
+    phs = []
     for shape in slide.shapes:
-        if not shape.is_placeholder:
-            continue
+        if shape.is_placeholder and shape.placeholder_format.type in (2, 7):
+            phs.append(shape)
+    phs.sort(key=lambda s: s.placeholder_format.idx)
+    return phs
 
-        placeholder = shape.placeholder_format
-        ph_type = placeholder.type
 
-        # Title placeholder
-        if ph_type == 1:  # PP_PLACEHOLDER.TITLE
-            if title:
-                shape.text = title
-                title_filled = True
-                print(f"  - Filled title: {title[:30]}...")
+def set_title(slide, text):
+    if text and slide.shapes.title is not None:
+        slide.shapes.title.text = text
+        return True
+    return False
 
-        # Content/Text placeholders
-        elif ph_type in [2, 7]:  # BODY or OBJECT
-            if content_count == 0 and main:
-                shape.text = main
-                content_count += 1
-                print(f"  - Filled main message: {main[:30]}...")
-            elif content_count == 1 and sub:
-                shape.text = sub
-                content_count += 1
-                print(f"  - Filled sub message: {sub[:30]}...")
 
-    # 시간 텍스트박스 업데이트 (비활성화 - 사용자가 직접 관리)
-    # if time_str:
-    #     for shape in slide.shapes:
-    #         # 자리표시자는 제외 (일반 텍스트박스만)
-    #         if shape.is_placeholder:
-    #             continue
-    #
-    #         if shape.has_text_frame:
-    #             text = shape.text_frame.text
-    #             # "<시간>" 텍스트가 정확히 있으면 대체
-    #             if '<시간>' in text:
-    #                 # 위치가 우측 상단인지 확인
-    #                 if shape.left > Inches(7):  # 우측
-    #                     shape.text = time_str
-    #                     print(f"  - Updated time: {time_str}")
-    #                     break
+def add_fallback_textbox(slide, prs, text, top_in=1.5, size=18):
+    left, top, width, height = Inches(0.8), Inches(top_in), prs.slide_width - Inches(1.6), Inches(4.5)
+    tb = slide.shapes.add_textbox(left, top, width, height)
+    tf = tb.text_frame
+    tf.word_wrap = True
+    tf.text = text
+    for p in tf.paragraphs:
+        p.font.size = Pt(size)
+    return tb
 
-    # 슬라이드 노트에 태그 추가
-    slide_tag = slide_type.replace(' ', '')  # "Concrete Practice" -> "ConcretePractice"
-    notes_slide = slide.notes_slide
-    text_frame = notes_slide.notes_text_frame
 
-    # time 정보가 있으면 추가
-    if time_str:
-        text_frame.text = f"#Skill #{slide_tag} #{time_str}"
-    else:
-        text_frame.text = f"#Skill #{slide_tag}"
+def set_notes(slide, lines):
+    """강사 노트 설정. lines: 문자열 리스트 (빈 항목 제외)"""
+    text = '\n'.join([l for l in lines if l])
+    slide.notes_slide.notes_text_frame.text = text
 
+
+def activity_block(slide_content, catalog):
+    """'▶ 활동' 블록 텍스트. 없으면 ''"""
+    text = render_activity(slide_content, catalog)
+    if not text:
+        return ''
+    t = slide_content.get('time')
+    head = f'▶ 활동 ({t})' if t else '▶ 활동'
+    return f'{head}\n{text}'
+
+
+def tag_line(slide_content):
+    tag = slide_content.slide_type.replace(' ', '')
+    parts = ['#Skill', f'#{tag}']
+    if slide_content.get('time'):
+        parts.append(f"#{slide_content.get('time')}")
+    if slide_content.get('pattern'):
+        parts.append(f"#Pattern:{slide_content.get('pattern')}")
+    return ' '.join(parts)
+
+
+# ------------------------------------------------------------- slide builders
+
+def add_title_slide(prs, course):
+    layout = find_first_layout(prs, 'Title_Page', 'Title Slide', 'Title')
+    if layout is None:
+        return None
+    slide = prs.slides.add_slide(layout)
+    set_title(slide, course.title)
+    phs = body_placeholders(slide)
+    fm = course.frontmatter
+    line1 = ' · '.join([v for v in [fm.get('subtitle'), fm.get('audience')] if v])
+    line2 = ' · '.join([v for v in [fm.get('total_time'), fm.get('outcome')] if v])
+    if phs:
+        if line1:
+            phs[0].text = line1
+        if len(phs) > 1 and line2:
+            phs[1].text = line2
+        elif len(phs) == 1 and line2:
+            phs[0].text = (line1 + '\n' + line2).strip()
+    set_notes(slide, ['#Skill #TitlePage',
+                      f"[과정 성과] {fm.get('outcome')}" if fm.get('outcome') else '',
+                      f"[대상] {fm.get('audience')}" if fm.get('audience') else '',
+                      f"[모드] {fm.get('mode')}" if fm.get('mode') else ''])
+    safe_print(f"  [OK] Title slide: {course.title}")
     return slide
 
 
-def add_module_start_slide(prs, module_title, content=''):
-    """모듈 시작 슬라이드 추가"""
-    # Module_Divider 레이아웃 우선 찾기
-    layout = find_layout_by_name(prs, "Module_Divider")
-    if layout is None:
-        layout = find_layout_by_name(prs, "Module Divider")
-    if layout is None:
-        layout = find_layout_by_name(prs, "Title Slide")
-    if layout is None:
-        layout = find_layout_by_name(prs, "Title")
+def add_module_start_slide(prs, module_title, content='', outcome=''):
+    layout = find_first_layout(prs, 'Module_Divider', 'Module Divider', 'Title Slide', 'Title')
     if layout is None:
         layout = prs.slide_layouts[0]
+    slide = prs.slides.add_slide(layout)
+    set_title(slide, module_title)
+    phs = body_placeholders(slide)
+    body = content or ''
+    if outcome:
+        body = (body + '\n' if body else '') + f'학습 성과: {outcome}'
+    if phs and body:
+        phs[0].text = body
+    set_notes(slide, ['#Skill #ModuleStart',
+                      f'[학습 성과] {outcome}' if outcome else ''])
+    return slide
+
+
+def add_4c_slide_with_layout(prs, slide_content, catalog=None, time_str=None, title=None, main=None, sub=None):
+    """
+    4C/Review 슬라이드 추가.
+    v1.0 호환: add_4c_slide_with_layout(prs, 'Connect', time, title, main, sub) 형태도 허용.
+    """
+    if isinstance(slide_content, str):   # v1.0 시그니처
+        sc = SlideContent(slide_content, time=time_str or '', title=title or '', main=main or '', sub=sub or '')
+    else:
+        sc = slide_content
+    slide_type = sc.slide_type
+
+    layout = find_first_layout(prs, f'4C - {slide_type}', slide_type)
+    if layout is None and slide_type == 'Review':
+        layout = find_first_layout(prs, '4C - Concept', 'Concept')
+        if layout is not None:
+            safe_print("  [INFO] 'Review' layout not found. Using Concept layout.")
+    if layout is None:
+        safe_print(f"[WARNING] Layout for '{slide_type}' not found in template. Using blank layout.")
+        layout = blank_layout(prs)
 
     slide = prs.slides.add_slide(layout)
+    set_title(slide, sc.get('title'))
 
-    # 제목 채우기
-    if slide.shapes.title:
-        slide.shapes.title.text = module_title
+    main_text = sc.get('main', '')
+    sub_text = sc.get('sub', '')
+    act = activity_block(sc, catalog)
+    plan = sc.get('action_plan', '')
+    plan_text = f'✍ 실행 계획\n{plan}' if plan else ''
 
-    # 부제목 채우기 (content)
-    if content:
-        for shape in slide.shapes:
-            if shape.is_placeholder:
-                ph_type = shape.placeholder_format.type
-                if ph_type == 2:  # Subtitle
-                    shape.text = content
-                    break
+    # Review: main/sub 없이 활동만
+    if slide_type == 'Review' and not main_text:
+        main_text = act
+        act = ''
 
+    tail = '\n\n'.join([t for t in [act, plan_text] if t])
+    phs = body_placeholders(slide)
+
+    if len(phs) >= 2:
+        if main_text:
+            phs[0].text = main_text
+        second = '\n\n'.join([t for t in [sub_text, tail] if t])
+        if second:
+            phs[1].text = second
+    elif len(phs) == 1:
+        combined = '\n\n'.join([t for t in [main_text, sub_text, tail] if t])
+        if combined:
+            phs[0].text = combined
+    else:
+        combined = '\n\n'.join([t for t in [main_text, sub_text, tail] if t])
+        if combined:
+            add_fallback_textbox(slide, prs, combined)
+
+    # 강사 노트
+    notes = [tag_line(sc)]
+    act_full = render_activity(sc, catalog)
+    if act_full:
+        notes.append(f'[활동]\n{act_full}')
+    if plan:
+        notes.append(f'[실행 계획] {plan}')
+    if sc.get('notes'):
+        notes.append(f"[강사 노트]\n{sc.get('notes')}")
+    if sc.get('handout'):
+        notes.append('[부록] 이 슬라이드의 handout 내용은 *_handout.md 참고')
+    if sc.get('alt'):
+        notes.append(f"[교환 후보] {', '.join(sc.get('alt'))}")
+    set_notes(slide, notes)
+
+    safe_print(f"  [OK] {slide_type}: {sc.get('title', '')[:30]}")
     return slide
 
 
 def add_image_slide(prs, image_path, caption=''):
-    """이미지 슬라이드 추가"""
-    layout = find_layout_by_name(prs, "Blank")
-    if layout is None:
-        layout = prs.slide_layouts[6] if len(prs.slide_layouts) > 6 else prs.slide_layouts[0]
-
-    slide = prs.slides.add_slide(layout)
-
+    slide = prs.slides.add_slide(blank_layout(prs))
     try:
-        # 이미지 추가
-        left = Inches(1)
-        top = Inches(1)
-        width = Inches(8)
-
-        pic = slide.shapes.add_picture(image_path, left, top, width=width)
-
-        # 중앙 정렬
-        slide_width = prs.slide_width
-        slide_height = prs.slide_height
-        pic.left = int((slide_width - pic.width) / 2)
-        pic.top = int((slide_height - pic.height) / 2)
-
-        # 캡션
+        pic = slide.shapes.add_picture(image_path, Inches(1), Inches(1), width=Inches(8))
+        pic.left = int((prs.slide_width - pic.width) / 2)
+        pic.top = int((prs.slide_height - pic.height) / 2)
         if caption:
-            left = Inches(0.5)
-            top = Inches(6.5)
-            width = Inches(9)
-            height = Inches(0.8)
-
-            textbox = slide.shapes.add_textbox(left, top, width, height)
-            text_frame = textbox.text_frame
-            p = text_frame.paragraphs[0]
+            tb = slide.shapes.add_textbox(Inches(0.5), Inches(6.5), Inches(9), Inches(0.8))
+            p = tb.text_frame.paragraphs[0]
             p.text = caption
             p.font.size = Pt(16)
             p.font.italic = True
             p.alignment = PP_ALIGN.CENTER
             p.font.color.rgb = RGBColor(100, 100, 100)
-
     except Exception as e:
-        print(f"[WARNING] Failed to add image '{image_path}': {e}")
-        # 텍스트로 대체
-        left = Inches(1)
-        top = Inches(3)
-        width = Inches(8)
-        height = Inches(2)
-
-        textbox = slide.shapes.add_textbox(left, top, width, height)
-        text_frame = textbox.text_frame
-        p = text_frame.paragraphs[0]
+        safe_print(f"[WARNING] Failed to add image '{image_path}': {e}")
+        tb = slide.shapes.add_textbox(Inches(1), Inches(3), Inches(8), Inches(2))
+        p = tb.text_frame.paragraphs[0]
         p.text = f"[Image: {image_path}]\n{caption}"
         p.alignment = PP_ALIGN.CENTER
         p.font.size = Pt(20)
         p.font.color.rgb = RGBColor(150, 150, 150)
-
+    set_notes(slide, ['#Skill #Image'])
     return slide
 
 
 def add_video_slide(prs, video_path, description='', duration=''):
-    """비디오 슬라이드 추가"""
-    layout = find_layout_by_name(prs, "Blank")
-    if layout is None:
-        layout = prs.slide_layouts[6] if len(prs.slide_layouts) > 6 else prs.slide_layouts[0]
-
-    slide = prs.slides.add_slide(layout)
-
-    # 비디오 아이콘
-    left = Inches(4)
-    top = Inches(2.5)
-    width = Inches(2)
-    height = Inches(1.5)
-
-    textbox = slide.shapes.add_textbox(left, top, width, height)
-    text_frame = textbox.text_frame
-    p = text_frame.paragraphs[0]
-    p.text = "▶️\nVIDEO"
+    slide = prs.slides.add_slide(blank_layout(prs))
+    tb = slide.shapes.add_textbox(Inches(4), Inches(2.5), Inches(2), Inches(1.5))
+    p = tb.text_frame.paragraphs[0]
+    p.text = "▶\nVIDEO"
     p.alignment = PP_ALIGN.CENTER
     p.font.size = Pt(48)
     p.font.bold = True
 
-    # 설명
-    info_text = f"Video: {video_path}"
+    info = f"Video: {video_path}"
     if description:
-        info_text += f"\n\n{description}"
+        info += f"\n\n{description}"
     if duration:
-        info_text += f"\n\n재생 시간: {duration}"
-
-    left = Inches(1.5)
-    top = Inches(4.5)
-    width = Inches(7)
-    height = Inches(2)
-
-    textbox = slide.shapes.add_textbox(left, top, width, height)
-    text_frame = textbox.text_frame
-    text_frame.word_wrap = True
-    p = text_frame.paragraphs[0]
-    p.text = info_text
+        info += f"\n\n재생 시간: {duration}"
+    tb = slide.shapes.add_textbox(Inches(1.5), Inches(4.5), Inches(7), Inches(2))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.text = info
     p.alignment = PP_ALIGN.CENTER
     p.font.size = Pt(18)
     p.font.color.rgb = RGBColor(100, 100, 100)
-
+    set_notes(slide, ['#Skill #Video', f'#{duration}' if duration else ''])
     return slide
 
 
 def add_break_slide(prs, time_str='', sub_message=''):
-    """Break 슬라이드 추가"""
-    # 템플릿에서 Break 레이아웃 찾기
     layout = find_layout_by_name(prs, "Break")
-
     if layout is not None:
-        # Break 레이아웃이 있으면 그대로 사용
         slide = prs.slides.add_slide(layout)
-
-        # Title placeholder에 시간 채우기
-        if time_str and slide.shapes.title:
-            slide.shapes.title.text = time_str
-
-        # Sub message placeholder 채우기
-        if sub_message:
-            for shape in slide.shapes:
-                if shape.is_placeholder:
-                    ph_type = shape.placeholder_format.type
-                    if ph_type in [2, 7]:  # BODY or OBJECT
-                        shape.text = sub_message
-                        break
-
-        safe_print("  [OK] Added Break slide (using template layout)")
-        return slide
-
-    # Break 레이아웃이 없으면 Blank 사용
-    layout = find_layout_by_name(prs, "Blank")
-    if layout is None:
-        layout = prs.slide_layouts[6] if len(prs.slide_layouts) > 6 else prs.slide_layouts[0]
-
-    slide = prs.slides.add_slide(layout)
-
-    # 배경색
-    background = slide.background
-    fill = background.fill
-    fill.solid()
-    fill.fore_color.rgb = RGBColor(245, 245, 245)
-
-    # Break 텍스트
-    left = Inches(3)
-    top = Inches(3)
-    width = Inches(4)
-    height = Inches(1.5)
-
-    textbox = slide.shapes.add_textbox(left, top, width, height)
-    text_frame = textbox.text_frame
-    p = text_frame.paragraphs[0]
-    p.text = "☕ Break"
-    p.alignment = PP_ALIGN.CENTER
-    p.font.size = Pt(54)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor(100, 100, 100)
-
-    safe_print("  [OK] Added Break slide (using Blank layout)")
+        if time_str:
+            set_title(slide, time_str)
+        phs = body_placeholders(slide)
+        if sub_message and phs:
+            phs[0].text = sub_message
+    else:
+        slide = prs.slides.add_slide(blank_layout(prs))
+        fill = slide.background.fill
+        fill.solid()
+        fill.fore_color.rgb = RGBColor(245, 245, 245)
+        tb = slide.shapes.add_textbox(Inches(3), Inches(3), Inches(4), Inches(1.5))
+        p = tb.text_frame.paragraphs[0]
+        p.text = "☕ Break"
+        p.alignment = PP_ALIGN.CENTER
+        p.font.size = Pt(54)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(100, 100, 100)
+    set_notes(slide, ['#Skill #Break', f'#{time_str}' if time_str else ''])
+    safe_print("  [OK] Break slide")
     return slide
 
 
-def create_presentation_from_markdown(md_file, template_file, output_file='output.pptx'):
-    """Markdown 파일로부터 프레젠테이션 생성 (마스터 레이아웃 사용)"""
+def add_end_slide(prs):
+    layout = find_layout_by_name(prs, 'End')
+    if layout is None:
+        return None
+    slide = prs.slides.add_slide(layout)
+    set_notes(slide, ['#Skill #End'])
+    safe_print("  [OK] End slide")
+    return slide
 
-    # Markdown 파싱
-    print(f"[INFO] Parsing markdown file: {md_file}")
-    modules = parse_markdown(md_file)
-    print(f"[INFO] Found {len(modules)} modules")
 
-    # 템플릿 로드
+# ------------------------------------------------------------- handout
+
+def write_handout(course, items, out_path):
+    """items: [(module_title, slide_type, slide_title, text)]"""
+    lines = [f"# {course.title or '교육 과정'} — 참고 자료 (부록)", '']
+    fm = course.frontmatter
+    if fm.get('audience'):
+        lines.append(f"- 대상: {fm['audience']}")
+    if fm.get('outcome'):
+        lines.append(f"- 과정 성과: {fm['outcome']}")
+    lines.append('')
+    lines.append('> 슬라이드에 넣지 않은 nice-to-know 내용입니다. 강의 중 배포하지 말고 끝난 뒤 또는 사전 자료로 쓰세요.')
+    lines.append('')
+    current = None
+    for mod_title, stype, stitle, text in items:
+        if mod_title != current:
+            current = mod_title
+            lines.append(f'## {mod_title}')
+            lines.append('')
+        head = stitle or stype
+        lines.append(f'### {head}  ({stype})')
+        lines.append('')
+        lines.append(text)
+        lines.append('')
+    with open(out_path, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines))
+    safe_print(f"[OK] Handout written: {out_path} ({len(items)} items)")
+
+
+# ------------------------------------------------------------- main build
+
+def create_presentation_from_markdown(md_file, template_file, output_file='output.pptx',
+                                      catalog_path=None, add_title=True, add_end=True,
+                                      handout_path=None):
+    safe_print(f"[INFO] Parsing markdown file: {md_file}")
+    course = parse_course(md_file)
+    catalog = load_catalog(catalog_path)
+    safe_print(f"[INFO] Found {len(course.modules)} modules, catalog {len(catalog)} activities")
+
     try:
         prs = Presentation(template_file)
-        print(f"[INFO] Using template: {template_file}")
-        print(f"[INFO] Available layouts in template:")
-        for idx, layout in enumerate(prs.slide_layouts):
-            print(f"  [{idx}] {layout.name}")
+        safe_print(f"[INFO] Using template: {template_file}")
     except Exception as e:
-        print(f"[ERROR] Failed to load template '{template_file}': {e}")
+        safe_print(f"[ERROR] Failed to load template '{template_file}': {e}")
         sys.exit(1)
 
-    # 슬라이드 생성
-    total_slides = 0
+    total = 0
+    handout_items = []
 
-    for module in modules:
-        print(f"\n[INFO] Processing module: {module['title']}")
+    if add_title and course.title:
+        if add_title_slide(prs, course) is not None:
+            total += 1
 
-        for slide in module['slides']:
-            slide_type = slide.slide_type
-            data = slide.data
+    for module in course.modules:
+        if not module.slides:
+            continue
+        safe_print(f"\n[INFO] Module: {module.title}")
+        for sc in module.slides:
+            st = sc.slide_type
+            data = sc.data
 
-            if slide_type == 'Module Start':
-                content = data.get('content', '')
-                add_module_start_slide(prs, module['title'], content)
-                total_slides += 1
-                try:
-                    print(f"  ✓ Added Module Start slide")
-                except UnicodeEncodeError:
-                    print(f"  [OK] Added Module Start slide")
+            if st == 'Module Start':
+                add_module_start_slide(prs, module.title, data.get('content', ''), module.outcome)
+                total += 1
+                safe_print("  [OK] Module Start")
 
-            elif slide_type in ['Connect', 'Concept', 'Concrete Practice', 'Conclusion']:
-                time_str = data.get('time', '')
-                title = data.get('title', '')
-                main = data.get('main', '')
-                sub = data.get('sub', data.get('activity', ''))
+            elif st in LEARNER_SLIDES:
+                add_4c_slide_with_layout(prs, sc, catalog)
+                total += 1
 
-                # 디버그: sub 값 확인
-                safe_print(f"  [DEBUG] slide_type={slide_type}, sub length={len(sub) if sub else 0}")
-                if sub:
-                    safe_print(f"  [DEBUG] sub preview: {sub[:50]}...")
+            elif st == 'Image':
+                if data.get('image'):
+                    add_image_slide(prs, data['image'], data.get('caption', ''))
+                    total += 1
+                    safe_print("  [OK] Image slide")
 
-                add_4c_slide_with_layout(prs, slide_type, time_str, title, main, sub)
-                total_slides += 1
+            elif st == 'Video':
+                if data.get('video'):
+                    add_video_slide(prs, data['video'], data.get('description', ''), data.get('duration', ''))
+                    total += 1
+                    safe_print("  [OK] Video slide")
 
-            elif slide_type == 'Image':
-                image_path = data.get('image', '')
-                caption = data.get('caption', '')
-                if image_path:
-                    add_image_slide(prs, image_path, caption)
-                    total_slides += 1
-                    print(f"  [OK] Added Image slide")
+            elif st == 'Break':
+                add_break_slide(prs, data.get('time', ''), data.get('sub', ''))
+                total += 1
 
-            elif slide_type == 'Video':
-                video_path = data.get('video', '')
-                description = data.get('description', '')
-                duration = data.get('duration', '')
-                if video_path:
-                    add_video_slide(prs, video_path, description, duration)
-                    total_slides += 1
-                    print(f"  [OK] Added Video slide")
+            else:
+                safe_print(f"  [WARNING] Unknown slide type '{st}' (line {sc.line_no}) skipped")
 
-            elif slide_type == 'Break':
-                time_str = data.get('time', '')
-                sub_message = data.get('sub', '')
-                add_break_slide(prs, time_str, sub_message)
-                total_slides += 1
-                print(f"  [OK] Added Break slide")
+            if data.get('handout'):
+                handout_items.append((module.title, st, data.get('title', ''), data['handout']))
 
-    # 저장
+    if add_end:
+        if add_end_slide(prs) is not None:
+            total += 1
+
     prs.save(output_file)
+    safe_print(f"\n[SUCCESS] PowerPoint file created: {output_file}")
+    safe_print(f"   Total {total} slides generated.")
 
-    try:
-        print(f"\n✅ PowerPoint 파일이 생성되었습니다: {output_file}")
-        print(f"   총 {total_slides} 슬라이드가 생성되었습니다.")
-    except UnicodeEncodeError:
-        print(f"\n[SUCCESS] PowerPoint file created: {output_file}")
-        print(f"   Total {total_slides} slides generated.")
+    if handout_items:
+        hp = Path(handout_path) if handout_path else Path(output_file).with_name(Path(output_file).stem + '_handout.md')
+        write_handout(course, handout_items, hp)
+
+    return output_file
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Markdown 파일로부터 4C 교육 구조 기반 PowerPoint 생성 (마스터 레이아웃 사용)',
+        description='Markdown 파일로부터 4C 교육 구조 기반 PowerPoint 생성',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-템플릿 요구사항:
-  템플릿에는 다음 레이아웃들이 있어야 합니다:
-  - "4C - Connect" (또는 "Connect")
-  - "4C - Concept" (또는 "Concept")
-  - "4C - Concrete Practice" (또는 "Concrete Practice")
-  - "4C - Conclusion" (또는 "Conclusion")
-
 예제:
-  python generate_with_master_layout.py \\
-    --md course.md \\
-    --template 4c_custom_template.pptx \\
-    --output result.pptx
+  python generate_with_master_layout.py --md course.md \\
+    --template pptx-templates/default_4c_template.pptx --output result.pptx
+
+빌드 전 검증:
+  python validate_markdown_v3.py --md course.md
         """
     )
-
-    parser.add_argument('--md', required=True, help='Markdown 콘텐츠 파일 경로')
-    parser.add_argument('--template', required=True, help='4C 커스텀 레이아웃이 포함된 템플릿 파일 경로')
+    parser.add_argument('--md', required=True, help='Markdown 콘텐츠 파일')
+    parser.add_argument('--template', required=True, help='4C 레이아웃이 포함된 템플릿 .pptx')
     parser.add_argument('--output', default='output.pptx', help='출력 파일명 (기본: output.pptx)')
-
+    parser.add_argument('--catalog', default=None, help='활동 카탈로그 JSON (기본: references/activities.json)')
+    parser.add_argument('--handout', default=None, help='부록 MD 경로 (기본: <output>_handout.md)')
+    parser.add_argument('--no-title', action='store_true', help='과정 제목 슬라이드 생략')
+    parser.add_argument('--no-end', action='store_true', help='End 슬라이드 생략')
     args = parser.parse_args()
 
-    # 파일 존재 확인
     if not Path(args.md).exists():
-        print(f"[ERROR] Markdown 파일을 찾을 수 없습니다: {args.md}")
+        safe_print(f"[ERROR] Markdown 파일을 찾을 수 없습니다: {args.md}")
         sys.exit(1)
-
     if not Path(args.template).exists():
-        print(f"[ERROR] 템플릿 파일을 찾을 수 없습니다: {args.template}")
+        safe_print(f"[ERROR] 템플릿 파일을 찾을 수 없습니다: {args.template}")
         sys.exit(1)
 
-    # PPT 생성
     create_presentation_from_markdown(
         md_file=args.md,
         template_file=args.template,
-        output_file=args.output
+        output_file=args.output,
+        catalog_path=args.catalog,
+        add_title=not args.no_title,
+        add_end=not args.no_end,
+        handout_path=args.handout,
     )
 
 

@@ -1,167 +1,152 @@
 ---
 name: 4c-edu-ppt
-description: 4C 교육 구조(Connect-Concept-Concrete Practice-Conclusion)로 교육용 PowerPoint 프레젠테이션 생성. 교육 자료, PPT, 프레젠테이션, 강의 자료 작성 시 사용.
+description: 4C 교육 구조(Connect-Concept-Concrete Practice-Conclusion)로 교육용 PowerPoint 프레젠테이션 생성. 교육 자료, PPT, 프레젠테이션, 강의 자료 작성 시 사용. Bowman의 "Training From the Back of the Room!" 원칙(학습자 행동 중심, 10분 규칙, 관찰 가능한 학습 성과)을 검증기와 활동 카탈로그로 지원.
 allowed-tools: Read, Bash, Write
 ---
 
 # 4C 교육 구조 기반 PPT 제작
 
-4C 교육 구조(Connect - Concept - Concrete Practice - Conclusion)를 활용하여 체계적인 교육용 PowerPoint 프레젠테이션을 자동 생성합니다.
+Markdown으로 쓴 교육 콘텐츠를 4C 구조의 PowerPoint로 변환한다. 4C는 Sharon Bowman의 *Training From the Back of the Room!* 에서 온 설계 틀이며, 각 단계는 **학습자가 무엇을 하는가**로 정의된다.
 
-## 4C 교육 구조란?
+## 4C 교육 구조
 
-- **Connect (연결)**: 학습자의 사전 경험과 새로운 학습 내용을 연결
-- **Concept (개념)**: 핵심 개념과 원리를 명확하게 제시
-- **Concrete Practice (구체화)**: 실제 적용 가능한 연습과 예시 제공
-- **Conclusion (정리)**: 학습 내용을 요약하고 성찰
+| 단계 | 학습자가 하는 것 | 시간 감각 |
+|---|---|---|
+| **Connect** | 주제·동료·학습 목표와 연결한다. 말하거나 쓴다. 아이스브레이커가 아니라 주제 관련 활동 | 짧게, 맨 앞 |
+| **Concept** | need-to-know 정보를 듣고·보고·쓰고·말한다 | 10분 단위. 사이에 Review |
+| **Concrete Practice** | 전원이 직접 한다. 시연을 보는 것은 실습이 아니다 | 넉넉히 |
+| **Conclusion** | 학습자가 요약·평가·실행 계획·축하한다. 강사가 요약하지 않는다 | 마지막 시간은 학습자 몫 |
 
-## 사용 방법
+철칙: 설명하는 사람이 배운다. 학습 성과는 관찰 가능한 동사로 쓴다("이해한다" 금지). 직접 강의는 10분을 넘기지 않는다.
 
-### 방법 1: Markdown 파일 사용 (권장)
+## 작업 순서
 
-**가장 쉽고 유연한 방법입니다!** 콘텐츠를 Markdown 파일로 작성하면:
-- 모듈 구조로 체계적 구성
-- 4C 슬라이드 반복 가능
-- 이미지, 비디오, Break 슬라이드 추가 가능
-- 버전 관리 및 협업 용이
+1. 콘텐츠 Markdown 작성 (아래 규격). AI로 생성하려면 `docs/ai-guides/AI_CONTENT_PROMPT.md` 프롬프트 사용
+2. 검증: `python scripts/validate_markdown_v3.py --md course.md` → error 0이 될 때까지 수정. warning은 설계 권고
+3. 빌드: `python scripts/generate_with_master_layout.py --md course.md --template pptx-templates/default_4c_template.pptx --output result.pptx`
+4. 활동 교체가 필요하면 `python scripts/swap_activity.py --md course.md --at "모듈1/Connect#1" --list`
 
-#### Markdown 파일 구조:
+스크립트 경로는 스킬 설치 위치 기준 (예: `.claude/skills/4c-edu-ppt/scripts/...`). `pip install python-pptx` 필요.
+
+## Markdown 규격
 
 ```markdown
-# 모듈 1: Python 기초
+---
+course: Python 프로그래밍 기초
+audience: 비전공 신입사원
+total_time: 170분
+outcome: 조건문으로 20줄 프로그램을 작성한다      # 관찰 가능한 동사
+mode: offline                                     # offline | online
+---
+
+# 모듈 1: 변수
+outcome: 변수를 선언하고 값을 출력하는 코드를 작성한다
 
 ## Module Start
-모듈 소개 내용
+Python의 첫걸음                                   # 20자 이내
 
 ## Connect
 time: 5분
-title: 연결하기
-main: 학습자와 연결할 내용
-sub: 보조 설명
+title: 기계에 명령해 본 적 있나요?
+main: 강사가 보여줄 한 줄
+pattern: standing-survey                          # 활동 카탈로그 ID
+params:
+  question: 오늘 아침 기계에 내린 명령 1가지는?
+  debrief: 공통 답 2개를 칠판에
+alt: turn-and-talk, wall-writing                  # 교환 후보
+notes: |                                          # 강사 노트 (슬라이드 노트로)
+  준비물: 없음
 
 ## Concept
-time: 10분
-title: 개념 설명
-main: 핵심 개념
-sub: 상세 설명
+time: 8분
+title: 변수란
+main: 변수는 값에 붙이는 이름표
+sub: |
+  name = "홍길동"
+activity: |                                       # 학습자가 하는 것 (직접 서술)
+  강의 중 2번 멈춤: 옆 사람과 답 맞추기
+handout: |                                        # nice-to-know → <output>_handout.md
+  Python 역사 ...
+
+## Review
+time: 2분
+title: 잠깐 정리
+pattern: turn-and-talk
+params:
+  question: 변수를 한 문장으로?
 
 ## Concrete Practice
 time: 15분
-title: 실습
-main: 실습 설명
-activity: |
-  1. 단계 1
-  2. 단계 2
+title: 나를 소개하는 프로그램
+main: 변수 3개를 만들어 출력
+pattern: paired-practice
+params:
+  task: name, age, food 변수 → f-string 출력
+  half: 5
 
 ## Conclusion
-time: 5분
-title: 정리
-main: 요약 내용
-sub: 다음 학습 예고
+time: 4분
+title: 내가 배운 것
+main: 카드에 배운 것 3가지
+pattern: learning-log
+params:
+  topic: 변수
+action_plan: 다음 주 적용할 것 1가지를 쓰고 옆 사람에게 말한다   # 과정 마지막 Conclusion에 권고
 
 ## Break
+time: 10분
+sub: 다음 모듈 예고
+
+## Image            # image:, caption:
+## Video            # video:, description:, duration:
 ```
 
-#### 실행 방법:
+필드 규칙
+- 모든 새 필드(outcome, activity, pattern, params, alt, notes, handout, action_plan, 프론트매터)는 **선택**. v1.0 파일은 그대로 빌드된다.
+- `activity:` 는 네 단계 모두 허용. 있으면 슬라이드 본문 하단에 "▶ 활동" 블록으로 들어간다.
+- `pattern:` 만 쓰면 카탈로그 템플릿 + `params` 로 활동 텍스트가 생성된다. `activity:` 가 있으면 그것이 우선.
+- `## Review` 는 10분 강의 사이에 끼우는 1~2분 전원 참여 활동. `main/sub` 없이 `activity` 또는 `pattern` 만.
+- 각 필드는 한 줄에 하나. 여러 줄 값은 `|` 뒤에 들여쓰기.
+
+## 활동 카탈로그와 교환
+
+`references/activities.md` (사람용) / `references/activities.json` (스크립트용). 단계별 활동 31개, 각각 시간·인원·모드·교환 그룹·템플릿을 가진다.
+
+교환 규칙
+- 같은 단계·같은 교환 그룹 → 자유. 시간·모드만 재검증
+- 같은 단계·다른 그룹 → 허용, 목적 차이 경고
+- 다른 단계 → 대상 활동의 `also_ok` 에 있을 때만
+- `jigsaw`(새 내용) ↔ `teach-back`(배운 내용) 은 어느 방향으로도 교환 금지
 
 ```bash
-python .claude/skills/4c-edu-ppt/scripts/generate_from_md.py \
-  --md course_content.md \
-  --template my_template.pptx \
-  --output result.pptx
+python scripts/swap_activity.py --md course.md --at "모듈1/Connect#1" --list      # 후보와 사유
+python scripts/swap_activity.py --md course.md --at "모듈1/Connect#1" --to turn-and-talk
+python scripts/swap_activity.py --md course.md --mode online                      # 일괄 모드 전환
 ```
 
-**예제 파일**: `.claude/skills/4c-edu-ppt/examples/example_course.md` 참고
+## 검증기가 보는 것
 
-### 방법 2: 명령줄 인자 사용 (간단한 PPT)
+- 형식(error): 한 줄 다중 필드, 모르는 슬라이드 타입, time 형식, 카탈로그에 없는 pattern, 단계·모드 불일치
+- 설계(warning): outcome 없음 또는 관찰 불가 동사, Concept 10분 초과(20분은 error), 활동 없는 Concept 연속 10분 초과, 활동 없는 Connect, 강사가 요약하는 Conclusion, 마지막 Conclusion에 action_plan 없음, 같은 pattern 3회 연속, total_time과 15% 이상 차이
+- 시간 리포트: 모듈별 합계, 강사 발화 vs 학습자 활동 근사 비율, 버퍼. `--report run_sheet.md` 로 진행표 저장
 
-간단한 1회성 PPT 생성 시 사용:
+`--strict` 또는 프론트매터 `strict: true` 면 warning도 실패.
 
-#### 필수 요구사항:
+## 참고 파일
 
-```bash
-pip install python-pptx
-```
+- `examples/example_course.md` — Bowman 준수 예제. 복사해서 시작
+- `examples/legacy_example_v1.md` — v1.0 형식 (하위 호환 확인용)
+- `templates/review_checklist.md` — 생성 콘텐츠 검토 체크리스트
+- `templates/phased_prompt.md` — 단계별 AI 생성 (성과 → 실습 → 개념 → 연결 → 정리 역방향 설계)
+- `docs/` — 설치, 템플릿 제작, 다른 AI 도구 사용법
 
-#### PPT 생성 요청:
+## 템플릿 레이아웃 이름
 
-사용자에게 다음 정보를 요청합니다:
-
-1. **교육 주제/제목**: 프레젠테이션의 메인 주제
-2. **Connect (연결)**: 학습자와 연결할 내용 (질문, 경험, 상황 등)
-3. **Concept (개념)**: 가르칠 핵심 개념과 내용
-4. **Concrete Practice (구체화)**: 실습, 예제, 활동 내용
-5. **Conclusion (정리)**: 요약 및 마무리 내용
-
-### 3. PPT 생성 프로세스
-
-다음 단계로 PowerPoint 파일을 생성합니다:
-
-1. 사용자로부터 각 단계별 내용 수집
-2. `scripts/generate_4c_ppt.py` 스크립트 실행
-3. 생성된 `.pptx` 파일 확인 및 전달
-
-### 4. 실행 예시
-
-```bash
-python .claude/skills/4c-edu-ppt/scripts/generate_4c_ppt.py \
-  --title "Python 기초 - 변수와 데이터 타입" \
-  --connect "여러분은 일상에서 정보를 어떻게 기억하나요? 이름표를 붙여 기억하시죠?" \
-  --concept "변수는 데이터를 저장하는 이름표입니다. Python에는 숫자, 문자열, 리스트 등 다양한 데이터 타입이 있습니다." \
-  --practice "실습: 자신의 이름과 나이를 변수에 저장하고 출력해봅시다." \
-  --conclusion "오늘 배운 변수와 데이터 타입은 모든 프로그래밍의 기초입니다." \
-  --output "python_basics.pptx"
-```
-
-### 5. 커스텀 템플릿 사용
-
-자신만의 PPTX 템플릿을 사용하려면 `--template` 옵션을 추가하세요:
-
-```bash
-python .claude/skills/4c-edu-ppt/scripts/generate_4c_ppt.py \
-  --template "내_템플릿.pptx" \
-  --title "교육 주제" \
-  --connect "연결 내용" \
-  --concept "개념 내용" \
-  --practice "실습 내용" \
-  --conclusion "정리 내용" \
-  --output "결과물.pptx"
-```
-
-**템플릿 사용 시 참고사항:**
-- 템플릿의 슬라이드 레이아웃(마스터 슬라이드)이 유지됩니다
-- 색상 테마, 폰트, 배경 디자인이 템플릿을 따릅니다
-- 레이아웃 0번(제목 슬라이드)과 1번(제목+내용)을 사용합니다
-- 템플릿 파일이 없거나 오류 시 기본 프레젠테이션으로 생성됩니다
-
-## 생성되는 슬라이드 구조
-
-1. **제목 슬라이드**: 교육 주제
-2. **Connect 슬라이드**: 학습자와의 연결
-3. **Concept 슬라이드**: 핵심 개념 설명
-4. **Concrete Practice 슬라이드**: 실습 및 예제
-5. **Conclusion 슬라이드**: 요약 및 정리
-6. **감사 슬라이드**: 마무리 인사
-
-## 커스터마이징
-
-생성된 PPT는 다음과 같이 커스터마이징할 수 있습니다:
-
-- 디자인 템플릿 변경
-- 색상 테마 조정
-- 글꼴 스타일 변경
-- 이미지 및 도표 추가
-
-## 주의사항
-
-- 각 단계의 내용은 명확하고 구체적으로 작성
-- Connect는 학습자의 관심을 끌 수 있는 질문이나 상황으로 시작
-- Concept은 핵심 내용만 간결하게 정리
-- Practice는 실제로 해볼 수 있는 구체적인 활동 제시
-- Conclusion은 학습 목표 달성 여부를 확인할 수 있도록 작성
+`Title_Page`, `Module_Divider`, `Connect`, `Concept`, `Review`(없으면 Concept 사용), `Concrete Practice`, `Conclusion`, `Break`, `End`, `Blank`. "4C - " 접두사도 인식.
 
 ## 문제 해결
 
-- **python-pptx 미설치**: `pip install python-pptx` 실행
-- **한글 깨짐**: UTF-8 인코딩 확인
-- **스크립트 권한 오류**: 스크립트 실행 권한 확인
+- python-pptx 미설치: `pip install python-pptx`
+- 한글 깨짐: 콘솔 `chcp 65001` 또는 `PYTHONIOENCODING=utf-8`
+- 슬라이드 텍스트 넘침: `sub`/`activity` 를 줄이거나 `handout:` 으로 옮긴다
+- pattern 오류: `references/activities.md` 에서 ID와 허용 단계 확인

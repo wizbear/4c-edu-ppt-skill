@@ -61,3 +61,6 @@ courses/*.pptx
 # 환경 설정
 .env
 .env.local
+
+# 리뷰 산출물
+_review/
