@@ -170,7 +170,7 @@ python scripts/validate_markdown_v3.py --md my_course.md [--strict] [--report ru
 
 ## 📚 문서
 
-- 시작: [빠른 시작](docs/getting-started/QUICK_START.md) · [상세 가이드](docs/getting-started/HOW_TO_USE.md) · [워크플로우](docs/reference/WORKFLOW_GUIDE.md)
+- 시작: **[사용 가이드 v1.1](docs/getting-started/USAGE_GUIDE.md)** · [빠른 시작](docs/getting-started/QUICK_START.md) · [상세 가이드](docs/getting-started/HOW_TO_USE.md) · [워크플로우](docs/reference/WORKFLOW_GUIDE.md)
 - AI 생성: [프롬프트](docs/ai-guides/AI_CONTENT_PROMPT.md) · [단계별 생성](templates/phased_prompt.md) · [기존 자료 변환](docs/ai-guides/CONVERT_TO_4C_PROMPT.md) · [Gemini/ChatGPT](docs/ai-guides/GEMINI_CHATGPT_QUICK.md) · [Claude Web](docs/ai-guides/CLAUDE_WEB_GUIDE.md)
 - 검토: [검토 체크리스트](templates/review_checklist.md) · [최종화 가이드](templates/finalization_guide.md)
 - 템플릿: [규칙](docs/templates/TEMPLATE_RULES.md) · [커스터마이징](docs/templates/TEMPLATE_CUSTOMIZATION.md) · [마스터 레이아웃](docs/templates/MASTER_LAYOUT_GUIDE.md)
