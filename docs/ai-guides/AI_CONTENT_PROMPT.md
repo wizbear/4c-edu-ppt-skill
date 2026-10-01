@@ -1,152 +1,181 @@
 # 4C 교육 콘텐츠 생성 프롬프트
 
-생성형 AI를 사용하여 4C 구조 교육 콘텐츠를 만들기 위한 프롬프트입니다.
+생성형 AI(Claude, ChatGPT, Gemini)로 4C 구조 교육 콘텐츠를 만들기 위한 프롬프트입니다.
+출력은 `scripts/validate_markdown_v3.py` 로 검증하고 `scripts/generate_with_master_layout.py` 로 PPT를 만듭니다.
 
 ---
 
 ## 📋 기본 프롬프트 (복사해서 사용)
 
 ```
-당신은 교육 콘텐츠 전문가입니다. 아래 4C 교수법 구조에 맞춰 교육 자료를 작성해주세요.
+당신은 교육 설계자입니다. Sharon Bowman의 4C 구조(Training From the Back of the Room!)로 교육 콘텐츠를 작성해주세요.
+4C의 각 단계는 "학습자가 무엇을 하는가"로 정의됩니다. 강사가 말할 내용이 아닙니다.
 
 ## 주제
 [여기에 교육 주제를 입력하세요]
 
-## 4C 구조 설명
-- **Connect (연결)**: 학습자의 경험, 관심사와 주제를 연결
-- **Concept (개념)**: 핵심 개념을 명확하고 간결하게 설명
-- **Concrete Practice (구체화)**: 실습, 예제, 활동을 통한 적용
-- **Conclusion (정리)**: 요약 및 다음 학습 예고
+## 대상과 시간
+- 대상: [누구, 사전 지식 수준]
+- 총 시간: [분]
+- 모듈 수: [n]
+- 모드: [offline / online]
 
-## 출력 형식
-다음 Markdown 형식으로 작성해주세요:
+## 4C 구조
+- Connect: 학습자가 주제·동료·목표와 연결한다. 말하거나 쓴다. 아이스브레이커가 아니라 주제 관련 활동
+- Concept: 학습자가 need-to-know 정보를 듣고·보고·쓰고·말한다. 한 슬라이드 10분 이하
+- Review: 10분 강의 사이에 끼우는 1~2분 전원 참여 복습
+- Concrete Practice: 전원이 직접 한다. 시연을 보는 것은 실습이 아니다
+- Conclusion: 학습자가 요약·평가·실행 계획을 쓴다. 강사가 요약하지 않는다
 
-# 모듈 1: [모듈 제목]
+## 설계 규칙 (반드시 지킬 것)
+1. outcome은 관찰 가능한 동사로 쓴다. "이해한다/안다/배운다/숙지한다" 금지.
+   사용: 설명한다, 작성한다, 시연한다, 나열한다, 구분한다, 적용한다, 남에게 가르친다
+2. Concept 한 슬라이드는 10분 이하. 넘으면 나누고 사이에 ## Review 를 넣는다
+3. Connect, Concept, Conclusion에도 학습자 활동(activity: 또는 pattern:)을 넣는다
+4. Concrete Practice는 전원 참여 + 짝/소그룹 상호의존 + 각자 결과물
+5. Conclusion은 학습자가 요약한다. 과정 마지막 Conclusion에는 action_plan: 을 넣는다
+6. need-to-know만 슬라이드에. nice-to-know는 handout: 에
+7. 활동은 아래 카탈로그 ID를 pattern: 에 쓴다. 없으면 activity: 에 직접 서술
 
-## Module Start
+## 활동 카탈로그 (pattern: 에 쓸 ID)
+- Connect: standing-survey, wall-writing, table-talk, turn-and-talk, think-write-share, fast-pass-wiifm
+- Concept: interactive-lecture, concept-map, graphic-organizer, three-before-me, jigsaw(새 내용, 20분+)
+- Review: turn-and-talk, pass-that-card, rapid-response, stand-stretch-speak, body-break(온라인), chat-blast(온라인)
+- Concrete Practice: paired-practice, skills-rounds, teach-back(배운 내용), improv-scenario, learner-created-game
+- Conclusion: learning-log, card-exchange, where-do-you-stand, four-square-feedback, public-action-plan, email-blast
+(온라인이면 standing-survey, pass-that-card, stand-stretch-speak, card-exchange, learner-created-game 은 쓰지 않는다)
 
-⚠️ 중요: 20자 이내의 짧은 문장으로 작성하세요!
-예: "변수와 함수의 기초를 배웁니다"
+## 출력 형식 (정확히 지킬 것)
 
-## Connect
-time: [소요 시간 (예: 3분)]
-title: [슬라이드 제목]
-main: [주요 메시지 - 질문이나 학습자와 연결되는 내용]
-sub:
-- [구체적 예시 1]
-- [구체적 예시 2]
-
-## Concept
-time: [소요 시간 (예: 5분)]
-title: [슬라이드 제목]
-main: [핵심 개념 설명]
-sub:
-- [개념 포인트 1]
-- [개념 포인트 2]
-- [개념 포인트 3]
-
-## Concrete Practice
-time: [소요 시간 (예: 10분)]
-title: [슬라이드 제목]
-main: [실습 설명]
-sub:
-- [단계 1]
-- [단계 2]
-- [단계 3]
-
-⚠️ 중요: Concrete Practice에서도 sub:를 사용하세요! (activity: 금지)
-
-## Conclusion
-time: [소요 시간 (예: 2분)]
-title: [슬라이드 제목]
-main: [요약 내용]
-sub:
-- [핵심 정리 1]
-- [다음 학습 예고]
-
-## Break
-time: [소요 시간 (예: 2분)]
-sub: 참여자들의 기운을 북돋을 15자 이내의 메시지(예: "짧은 쉬는 시간이지만 푹 쉬세요")
+---
+course: [과정명]
+audience: [대상]
+total_time: [분]분
+outcome: [관찰 가능한 동사 + 개념]
+mode: [offline/online]
 ---
 
-# 모듈 2: [다음 모듈 제목]
-[위와 동일한 구조 반복]
+# 모듈 1: [모듈 제목]
+outcome: [관찰 가능한 동사 + 개념]
 
-## 작성 가이드
-1. **Module Start**: 20자 이내로 짧게 (예: "비폭력대화의 첫걸음")
-2. **Connect**: 질문으로 시작하여 호기심 유발
-3. **Concept**: 전문 용어는 쉽게 풀어서 설명
-4. **Concrete Practice**: 구체적이고 실행 가능한 활동 (sub: 사용!)
-5. **Conclusion**: 핵심 내용 3-5개 요약
+## Module Start
+[20자 이내 한 줄]
 
-🚨 필수 준수사항:
-- 각 필드(time:, title:, main:, sub:)는 별도의 줄에 작성
+## Connect
+time: [3~5분]
+title: [제목]
+main: [강사가 보여줄 한 줄]
+pattern: [카탈로그 ID]
+params:
+  question: [학습자가 서로 나눌 질문]
+  debrief: [디브리프 방식]
+alt: [대체 활동 ID 1~2개]
+
+## Concept
+time: [≤10분]
+title: [제목]
+main: [핵심 한 문장]
+sub: |
+  - [포인트 1]
+  - [포인트 2]
+  - [포인트 3]
+pattern: [concept-map / graphic-organizer / interactive-lecture]
+params:
+  [키]: [값]
+handout: |
+  [슬라이드에서 뺀 nice-to-know]
+
+## Review
+time: 2분
+title: [제목]
+pattern: [Review 활동 ID]
+params:
+  question: [질문]
+
+## Concrete Practice
+time: [10~20분]
+title: [제목]
+main: [과제 한 줄]
+pattern: [Practice 활동 ID]
+params:
+  [키]: [값]
+activity: |
+  1. [단계 — 누가 무엇을, 몇 분]
+  2. [역할 교대]
+  3. [결과 비교]
+notes: |
+  관찰 포인트: [강사가 볼 것]
+
+## Conclusion
+time: [3~5분]
+title: [제목]
+main: [학습자에게 줄 지시 한 줄]
+pattern: [Conclusion 활동 ID]
+params:
+  topic: [모듈 주제]
+action_plan: [과정 마지막 모듈만. 기한 + 행동 + 누구에게 말할지]
+
+## Break
+time: [분]
+sub: [다음 모듈 예고 15자 이내]
+
+---
+
+# 모듈 2: [제목]
+[같은 구조 반복]
+
+🚨 형식 규칙
+- 각 필드는 별도의 줄. 한 줄에 두 필드 금지
+- 여러 줄 값은 `|` 뒤에 두 칸 들여쓰기
+- 필드명을 바꾸지 않는다 (time, title, main, sub, activity, pattern, params, alt, notes, handout, action_plan)
 - Module Start는 20자 이내
-- Concrete Practice에서도 sub: 사용 (activity: 금지)
-- sub: 다음에는 리스트 항목(-)으로 작성
 
-총 [원하는 모듈 수]개 모듈을 작성해주세요.
+총 [n]개 모듈을 작성해주세요.
 ```
 
 ---
 
 ## 🎯 주제별 맞춤 프롬프트
 
+기본 프롬프트 뒤에 붙입니다.
+
 ### 1. 프로그래밍 교육
 
 ```
 주제: Python 기초 - 변수와 데이터 타입
-
-4C 교육 구조로 3개 모듈을 작성해주세요.
-- 모듈 1: 변수의 개념
-- 모듈 2: 데이터 타입
-- 모듈 3: 변수 활용
+모듈 3개: 변수의 개념 / 데이터 타입 / 변수 활용
 
 각 모듈마다:
-- Connect: 일상생활의 예시로 시작 (예: 명찰, 상자에 라벨 붙이기)
-- Concept: 코드 예시 포함
-- Concrete Practice: 직접 작성해볼 수 있는 실습 코드
-- Conclusion: 다음 학습 내용(조건문, 반복문 등) 예고
-
-위 Markdown 형식을 정확히 지켜주세요.
+- Connect: 일상의 "이름표 붙이기" 경험을 학습자끼리 나눈다 (standing-survey 또는 turn-and-talk)
+- Concept: 코드 예시 포함. 학습자는 concept-map을 그리며 듣는다
+- Concrete Practice: paired-practice. 역할 교대로 둘 다 코드를 친다
+- Conclusion: learning-log. 마지막 모듈은 action_plan 포함
 ```
 
 ### 2. 비즈니스/업무 교육
 
 ```
 주제: Excel 피벗 테이블 활용
-
-4C 교육 구조로 2개 모듈을 작성해주세요.
-- 모듈 1: 피벗 테이블 기본
-- 모듈 2: 데이터 분석 실습
+모듈 2개: 피벗 테이블 기본 / 데이터 분석 실습
 
 각 모듈마다:
-- Connect: 업무에서 겪는 불편함으로 시작 (예: 데이터 정리의 어려움)
-- Concept: 피벗 테이블의 개념과 장점
-- Concrete Practice: 단계별 실습 가이드
-- Conclusion: 업무 효율 향상 포인트
-
-위 Markdown 형식을 정확히 지켜주세요.
+- Connect: 데이터 정리에서 겪은 불편을 wall-writing으로 모은다
+- Concept: graphic-organizer(비교표)를 채우며 듣는다
+- Concrete Practice: skills-rounds. 같은 데이터로 3라운드, 조건을 바꿔가며
+- Conclusion: where-do-you-stand로 자신감 자가 평가
 ```
 
 ### 3. 소프트 스킬 교육
 
 ```
 주제: 효과적인 프레젠테이션 기법
-
-4C 교육 구조로 4개 모듈을 작성해주세요.
-- 모듈 1: 청중 분석
-- 모듈 2: 스토리텔링
-- 모듈 3: 슬라이드 디자인
-- 모듈 4: 발표 연습
+모듈 4개: 청중 분석 / 스토리텔링 / 슬라이드 디자인 / 발표 연습
 
 각 모듈마다:
-- Connect: 나쁜 프레젠테이션 경험 공감
-- Concept: 효과적인 기법 소개
-- Concrete Practice: 실제 적용 활동
-- Conclusion: 핵심 팁 요약
-
-위 Markdown 형식을 정확히 지켜주세요.
+- Connect: 나쁜 프레젠테이션 경험을 table-talk로 나눈다
+- Concept: interactive-lecture. 10분마다 Review
+- Concrete Practice: improv-scenario 또는 teach-back
+- Conclusion: public-action-plan (다음 발표에 적용할 것 1가지)
 ```
 
 ---
@@ -154,306 +183,51 @@ sub: 참여자들의 기운을 북돋을 15자 이내의 메시지(예: "짧은 
 ## 🔧 고급 프롬프트 (상세 제어)
 
 ```
-당신은 전문 교육 설계자입니다. 다음 요구사항에 맞춰 교육 콘텐츠를 작성해주세요.
+당신은 교육 설계자입니다. 아래 요구사항과 설계 규칙에 맞춰 4C 교육 콘텐츠를 작성해주세요.
 
 ## 기본 정보
-- **주제**: [주제명]
-- **대상**: [초급/중급/고급 학습자]
-- **목표**: [학습 목표 3가지]
-- **총 시간**: [예: 60분]
+- 주제: [주제명]
+- 대상: [초급/중급/고급, 사전 지식]
+- 과정 outcome: [관찰 가능한 동사 + 개념]
+- 총 시간: [분]
+- 모드: [offline/online]
+- 인원: [n명]
 
 ## 구조 요구사항
-- 모듈 수: [2-5개]
-- 각 모듈당 시간: [10-20분]
-- Connect 단계는 질문 형태로 시작
-- Concept는 불릿 포인트 3-5개로 구성
-- Concrete Practice는 실습 단계를 명확하게
+- 모듈 수: [2~5개]
+- 모듈당 시간: [30~50분]
+- Concept는 10분 이하 단위, 사이에 Review
+- Practice는 전체 시간의 1/3 이상
+- 강사 발화는 전체의 1/3 이하
 
 ## 톤앤매너
 - [전문적 / 친근한 / 격식있는]
-- [이론 중심 / 실습 중심]
 
 ## 특별 요청
-- [예: 한국 문화에 맞는 예시 사용]
-- [예: 최신 트렌드 반영]
+- [예: 한국 상황에 맞는 예시]
 - [예: 기업 교육용]
 
-## 출력 형식
-정확히 이 Markdown 구조를 따라주세요:
-
-# 모듈 [번호]: [제목]
-
-## Module Start
-[모듈 소개]
-
-## Connect
-time: [시간]
-title: [제목]
-main: [주요 메시지]
-sub: [부가 설명]
-
-## Concept
-time: [시간]
-title: [제목]
-main: [핵심 개념]
-sub: |
-  - [요점 1]
-  - [요점 2]
-  - [요점 3]
-
-## Concrete Practice
-time: [시간]
-title: [제목]
-main: [실습 설명]
-activity: |
-  실습:
-  1. [단계 1]
-  2. [단계 2]
-  3. [단계 3]
-
-## Conclusion
-time: [시간]
-title: [제목]
-main: [요약]
-sub: [다음 학습]
-
-## Break
-
----
+[기본 프롬프트의 "설계 규칙", "활동 카탈로그", "출력 형식"을 그대로 붙여넣기]
 ```
 
 ---
 
-## 💡 프롬프트 작성 팁
+## ✅ 생성 후 할 일
 
-### 1. 명확한 주제 지정
-❌ **나쁜 예**: "Python 가르쳐줘"
-✅ **좋은 예**: "Python 초보자를 위한 '리스트와 딕셔너리' 3개 모듈"
+1. 결과를 `course.md` 로 저장
+2. 검증: `python scripts/validate_markdown_v3.py --md course.md`
+   - error → 형식 수정
+   - warning → 설계 권고. `templates/review_checklist.md` 로 검토
+3. 활동 교체: `python scripts/swap_activity.py --md course.md --at "모듈1/Connect#1" --list`
+4. 빌드: `python scripts/generate_with_master_layout.py --md course.md --template pptx-templates/default_4c_template.pptx --output result.pptx`
 
-### 2. 학습 대상 명시
-```
-- 대상: IT 비전공자, 20-30대 직장인
-- 사전 지식: 컴퓨터 기본 조작 가능
-- 학습 목표: 업무 자동화 스크립트 작성
-```
+## 💡 수정 요청 예시
 
-### 3. 시간 배분 가이드
-```
-모듈 1 (15분):
-  Connect: 3분
-  Concept: 5분
-  Practice: 5분
-  Conclusion: 2분
-```
-
-### 4. 예시 요청
-```
-Connect 단계에서는 반드시:
-- 한국 직장인이 공감할 수 있는 상황 예시
-- 실제 업무 사례 포함
-```
-
-### 5. 출력 형식 강조
-```
-⚠️ 중요: 다음 Markdown 형식을 정확히 지켜주세요.
-특히 "time:", "title:", "main:", "sub:", "activity:" 필드명은 그대로 사용하세요.
-```
-
----
-
-## 📝 프롬프트 체크리스트
-
-생성형 AI에게 요청하기 전 확인:
-
-- [ ] 교육 주제가 명확한가?
-- [ ] 학습 대상이 지정되었는가?
-- [ ] 원하는 모듈 수가 명시되었는가?
-- [ ] Markdown 형식을 정확히 설명했는가?
-- [ ] 각 4C 단계의 역할을 설명했는가?
-- [ ] 시간 배분 가이드를 제공했는가?
-- [ ] 원하는 톤앤매너를 지정했는가?
-
----
-
-## 🎨 예시 프롬프트 실행 결과
-
-### 입력 프롬프트:
-```
-주제: SQL 기초 - SELECT 문
-대상: 데이터 분석 입문자
-모듈: 2개
-위 Markdown 형식으로 작성
-```
-
-### 기대 출력:
-```markdown
-# 모듈 1: SQL과 데이터베이스 소개
-
-## Module Start
-데이터베이스는 정보의 보물창고입니다. 오늘은 그 보물을 꺼내는 열쇠인 SQL을 배워봅니다.
-
-## Connect
-time: 3분
-title: 데이터는 어디에?
-main: 회사의 모든 정보는 어디에 저장될까요?
-sub: 엑셀? 노트? 아닙니다. 대부분의 기업 데이터는 데이터베이스에 있습니다.
-
-## Concept
-time: 5분
-title: SQL이란?
-main: Structured Query Language - 데이터베이스와 대화하는 언어
-sub: |
-  - 데이터 조회 (SELECT)
-  - 데이터 입력 (INSERT)
-  - 데이터 수정 (UPDATE)
-  - 데이터 삭제 (DELETE)
-
-## Concrete Practice
-time: 10분
-title: 첫 SELECT 문 작성
-main: 실제로 데이터를 조회해봅시다
-activity: |
-  실습:
-  1. SELECT * FROM customers; 실행
-  2. 결과 확인하기
-  3. 특정 컬럼만 선택하기
-
-## Conclusion
-time: 2분
-title: 오늘 배운 내용
-main: SQL의 기본 개념과 SELECT 문을 배웠습니다
-sub: 다음 시간: WHERE 조건으로 원하는 데이터만 찾기
-
-## Break
-
----
-
-# 모듈 2: SELECT 문 활용
-...
-```
-
----
-
-## 🚀 실전 활용 방법
-
-### 1단계: 프롬프트 복사
-위 기본 프롬프트를 복사합니다.
-
-### 2단계: 주제 입력
-```
-주제: [여기에 교육 주제 입력]
-```
-
-### 3단계: AI에게 요청
-ChatGPT, Claude, Gemini 등에 붙여넣기
-
-### 4단계: 결과 저장
-```bash
-# AI가 생성한 내용을 .md 파일로 저장
-내_교육과정.md
-```
-
-### 5단계: PPT 생성
-```bash
-python .claude/skills/4c-edu-ppt/scripts/generate_with_master_layout.py \
-  --md 내_교육과정.md \
-  --template 26-01-06_my_template.pptx \
-  --output 결과.pptx
-```
-
----
-
-## 🔄 반복 개선 프롬프트
-
-첫 결과가 마음에 안 들면:
-
-```
-위 내용을 다음과 같이 수정해주세요:
-
-1. Connect 단계를 더 흥미롭게
-   - 실제 사례나 통계 추가
-   - 질문을 더 구체적으로
-
-2. Concept 단계를 더 쉽게
-   - 전문 용어를 풀어서 설명
-   - 비유나 은유 사용
-
-3. Concrete Practice를 더 실용적으로
-   - 실무에 바로 적용 가능한 예제
-   - 단계를 더 세분화
-
-4. 시간 조정
-   - Connect: 3분 → 5분
-   - Concept: 5분 → 7분
-```
-
----
-
-## 📊 품질 검증 체크리스트
-
-AI가 생성한 콘텐츠 확인:
-
-### 형식 검증
-- [ ] Markdown 형식이 정확한가?
-- [ ] `time:`, `title:`, `main:`, `sub:` 필드가 있는가?
-- [ ] `## Module Start`, `## Break` 구조가 맞는가?
-
-### 내용 검증
-- [ ] Connect: 학습자와 연결되는 내용인가?
-- [ ] Concept: 개념이 명확하게 설명되었는가?
-- [ ] Practice: 실습이 구체적이고 실행 가능한가?
-- [ ] Conclusion: 핵심 내용이 잘 요약되었는가?
-
-### 교육 품질
-- [ ] 학습 목표가 달성 가능한가?
-- [ ] 난이도가 대상자에게 적절한가?
-- [ ] 시간 배분이 현실적인가?
-- [ ] 예시가 이해하기 쉬운가?
-
----
-
-## 💬 자주 묻는 질문
-
-### Q1: AI가 형식을 안 지킵니다
-**A**: 프롬프트에 다음을 추가하세요:
-```
-⚠️ 매우 중요: 반드시 이 형식을 정확히 지켜주세요.
-필드명을 바꾸거나 생략하지 마세요:
-- time: (O) / 시간: (X)
-- main: (O) / 메인: (X)
-```
-
-### Q2: 내용이 너무 길거나 짧습니다
-**A**: 글자 수를 지정하세요:
-```
-- main: 50-100자 이내
-- sub: 100-200자 이내
-- activity: 각 단계당 한 줄씩
-```
-
-### Q3: 여러 모듈을 한번에 생성하면 품질이 떨어집니다
-**A**: 모듈별로 나눠서 요청하세요:
-```
-먼저 모듈 1만 작성해주세요.
-[확인 후]
-이제 모듈 2를 작성해주세요.
-```
-
-### Q4: 전문 용어가 너무 많습니다
-**A**: 대상자 수준을 명확히:
-```
-대상: IT 비전공자, 프로그래밍 경험 없음
-전문 용어는 모두 쉬운 말로 풀어서 설명
-```
-
----
-
-## 📚 추가 리소스
-
-- `README.md` - 전체 Skill 사용법
-- `TEMPLATE_RULES.md` - 템플릿 제작 규칙
-- `my_test_course.md` - 예제 파일
-
----
-
-이 프롬프트로 효과적인 4C 교육 콘텐츠를 빠르게 생성할 수 있습니다!
+| 증상 | 요청 |
+|---|---|
+| Connect가 질문으로만 끝남 | "Connect에 학습자가 옆 사람과 답을 나누는 pattern: turn-and-talk 를 넣어줘" |
+| Concept 15분 | "Concept를 8분·7분으로 나누고 사이에 ## Review 2분(pass-that-card)을 넣어줘" |
+| Practice가 시연 관람 | "전원이 직접 하는 paired-practice로 바꾸고 역할 교대를 명시해줘" |
+| Conclusion을 강사가 요약 | "학습자가 카드에 쓰는 learning-log로 바꿔줘" |
+| outcome에 "이해한다" | "관찰 가능한 동사로 바꿔줘" |
+| 슬라이드 글이 너무 많음 | "sub를 3개 포인트로 줄이고 나머지는 handout: 으로 옮겨줘" |

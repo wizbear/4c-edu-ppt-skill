@@ -112,7 +112,7 @@ Conclusion: #AB47BC (밝은 보라)
 
 ### 방법 3: 스크립트에서 색상 코드 수정
 
-`.claude/skills/4c-edu-ppt/scripts/generate_from_md.py` 파일 편집:
+`.claude/skills/4c-edu-ppt/scripts/generate_with_master_layout.py` 파일 편집:
 
 ```python
 # 32-37번 줄 부근
@@ -288,7 +288,7 @@ COLORS = {
 
 ```bash
 # 예제 Markdown으로 테스트
-python .claude/skills/4c-edu-ppt/scripts/generate_from_md.py \
+python .claude/skills/4c-edu-ppt/scripts/generate_with_master_layout.py \
   --md .claude/skills/4c-edu-ppt/examples/example_course.md \
   --template my_custom_template.pptx \
   --output test_custom.pptx

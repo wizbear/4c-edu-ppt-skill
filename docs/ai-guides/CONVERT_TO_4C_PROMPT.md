@@ -97,7 +97,10 @@ sub: [참여자들의 기운을 북돋을 15자 이내의 메시지 (예: "짧�
 2. 각 필드는 반드시 별도의 줄에 작성하세요!
 3. 한 줄에 여러 필드를 합치지 마세요!
 4. Module Start는 20자 이내로 짧게 작성하세요!
-5. Concrete Practice에서도 sub:를 사용하세요! (activity: 금지)
+5. 학습자가 하는 활동은 activity: 에 쓰세요. Concrete Practice는 activity: 필수, Connect/Concept/Conclusion도 가능하면 넣으세요!
+6. Concept 한 슬라이드는 10분 이하. 넘으면 나누고 사이에 ## Review (time, title, activity) 를 넣으세요!
+7. 모듈 제목 아래에 outcome: [관찰 가능한 동사 + 개념] 을 쓰세요. "이해한다/안다/배운다" 금지!
+8. Conclusion은 학습자가 요약하는 활동으로. 강사가 "오늘 배운 것"을 정리하지 마세요!
 
 ---
 
